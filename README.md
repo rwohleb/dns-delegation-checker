@@ -16,6 +16,7 @@ A Python tool for testing DNS delegation chains from root servers to target zone
 - **NS Record Validation**: Checks for missing or incorrect NS records
 - **NS Record Mismatch Detection**: Compares NS records between parent and child zones for consistency
 - **Legitimate Second-Level Domain Detection**: Avoids false positives for legitimate second-level domains (e.g., .co.uk, .com.br)
+- **Dynamic Root Server Fetching**: Automatically fetches current root servers from the internet
 - **Detailed Explanations**: Provides educational explanations of each issue found
 - **JSON Export**: Export results to JSON format for further analysis
 
@@ -52,6 +53,9 @@ python3 dns_delegation_checker.py test.mail.google.com --explain
 
 # Export results to JSON
 python3 dns_delegation_checker.py example.com --export results.json
+
+# Use hardcoded root servers
+python3 dns_delegation_checker.py example.com --no-dynamic-roots
 ```
 
 ### Command Line Options
@@ -59,6 +63,7 @@ python3 dns_delegation_checker.py example.com --export results.json
 - `domain`: Target domain to test (required)
 - `--export`: Export results to JSON file
 - `--explain`: Provide detailed explanations of issues
+- `--no-dynamic-roots`: Use hardcoded root servers instead of dynamic fetching
 - `--verbose`: Enable verbose output
 
 ## How It Works
@@ -165,7 +170,7 @@ The script handles various error conditions:
 - **Missing Zones**: Proper error reporting for non-existent domains
 - **DNS Server Errors**: Graceful handling of server errors
 - **IPv6 Support**: Handles both A and AAAA records for nameserver resolution
-- **Root Server Fallback**: Uses hardcoded list of root servers for reliable delegation chain tracing
+- **Dynamic Root Server Fetching**: Automatically fetches current root servers from multiple public DNS resolvers with fallback to hardcoded list
 
 ## Testing
 

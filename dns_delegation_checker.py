@@ -50,23 +50,96 @@ class DelegationCheck:
 class DNSDelegationChecker:
     """DNS delegation checker that traces the complete delegation chain"""
     
-    def __init__(self):
-        # Root servers
-        self.root_servers = [
-            "198.41.0.4",      # a.root-servers.net
-            "199.9.14.201",     # b.root-servers.net
-            "192.33.4.12",      # c.root-servers.net
-            "199.7.91.13",      # d.root-servers.net
-            "192.203.230.10",   # e.root-servers.net
-            "192.5.5.241",      # f.root-servers.net
-            "192.112.36.4",     # g.root-servers.net
-            "198.97.190.53",    # h.root-servers.net
-            "192.36.148.17",    # i.root-servers.net
-            "192.58.128.30",    # j.root-servers.net
-            "193.0.14.129",     # k.root-servers.net
-            "199.7.83.42",      # l.root-servers.net
-            "202.12.27.33",     # m.root-servers.net
+    # Fallback root servers in case dynamic fetching fails
+    FALLBACK_ROOT_SERVERS = [
+        "198.41.0.4",      # a.root-servers.net
+        "199.9.14.201",     # b.root-servers.net
+        "192.33.4.12",      # c.root-servers.net
+        "199.7.91.13",      # d.root-servers.net
+        "192.203.230.10",   # e.root-servers.net
+        "192.5.5.241",      # f.root-servers.net
+        "192.112.36.4",     # g.root-servers.net
+        "198.97.190.53",    # h.root-servers.net
+        "192.36.148.17",    # i.root-servers.net
+        "192.58.128.30",    # j.root-servers.net
+        "193.0.14.129",     # k.root-servers.net
+        "199.7.83.42",      # l.root-servers.net
+        "202.12.27.33",     # m.root-servers.net
+    ]
+    
+    def __init__(self, use_dynamic_roots: bool = True):
+        # Initialize root servers dynamically or use fallback
+        if use_dynamic_roots:
+            self.root_servers = self._fetch_root_servers()
+        else:
+            # Use fallback servers directly
+            self.root_servers = self.FALLBACK_ROOT_SERVERS
+            print("Using hardcoded root server list")
+    
+    def _fetch_root_servers(self) -> List[str]:
+        """Dynamically fetch root servers from the internet"""
+        # Try multiple public DNS resolvers for better reliability
+        public_resolvers = [
+            "8.8.8.8",      # Google DNS
+            "1.1.1.1",      # Cloudflare DNS
+            "208.67.222.222", # OpenDNS
         ]
+        
+        # Try multiple public DNS resolvers for better reliability
+        public_resolvers = [
+            "8.8.8.8",      # Google DNS
+            "1.1.1.1",      # Cloudflare DNS
+            "208.67.222.222", # OpenDNS
+        ]
+        
+        for resolver_ip in public_resolvers:
+            try:
+                # Create a resolver with specific nameserver
+                resolver = dns.resolver.Resolver()
+                resolver.nameservers = [resolver_ip]
+                resolver.timeout = 5
+                resolver.lifetime = 5
+                
+                # Query for root servers using the "." domain
+                answers = resolver.resolve(".", "NS")
+                root_servers = []
+                
+                for answer in answers:
+                    # Resolve each root server name to IP addresses
+                    try:
+                        ns_name = str(answer.target).rstrip('.')
+                        # Try A records first
+                        try:
+                            a_records = resolver.resolve(ns_name, 'A')
+                            for a_record in a_records:
+                                root_servers.append(str(a_record))
+                        except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer, dns.exception.Timeout):
+                            pass
+                        
+                        # Try AAAA records
+                        try:
+                            aaaa_records = resolver.resolve(ns_name, 'AAAA')
+                            for aaaa_record in aaaa_records:
+                                root_servers.append(str(aaaa_record))
+                        except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer, dns.exception.Timeout):
+                            pass
+                            
+                    except Exception:
+                        continue
+                
+                # If we successfully got root servers, return them
+                if root_servers:
+                    print(f"Successfully fetched {len(root_servers)} root servers dynamically using {resolver_ip}")
+                    return root_servers
+                    
+            except Exception as e:
+                # Try next resolver
+                continue
+        
+        # If all resolvers failed, use fallback
+        print("Warning: Could not fetch root servers dynamically from any public resolver")
+        print("Using fallback root server list")
+        return self.FALLBACK_ROOT_SERVERS
     
     def resolve_nameserver(self, ns_name: str) -> List[str]:
         """Resolve a nameserver name to IP addresses"""
@@ -438,10 +511,11 @@ def main():
     parser.add_argument("domain", help="Target domain to test (e.g., test.mail.google.com)")
     parser.add_argument("--export", help="Export results to JSON file")
     parser.add_argument("--explain", action="store_true", help="Provide detailed explanations for each error found")
+    parser.add_argument("--no-dynamic-roots", action="store_true", help="Use hardcoded root servers instead of dynamic fetching")
     
     args = parser.parse_args()
     
-    checker = DNSDelegationChecker()
+    checker = DNSDelegationChecker(use_dynamic_roots=not args.no_dynamic_roots)
     
     try:
         results = checker.check_delegation_chain(args.domain)

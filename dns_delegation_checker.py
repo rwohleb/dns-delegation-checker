@@ -162,11 +162,11 @@ class DNSDelegationChecker:
             except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer):
                 pass
             
-            # If we can't resolve, assume it's already an IP address
-            return [ns_name]
+            # If we can't resolve, return empty list instead of the original name
+            return []
             
         except Exception:
-            return [ns_name]
+            return []
     
     def query_authoritative(self, domain: str, record_type: str, nameservers: List[str]) -> Optional[dns.message.Message]:
         """Query authoritative nameservers for a specific record type"""
@@ -197,8 +197,13 @@ class DNSDelegationChecker:
                 return [], query_time
             
             ns_records = []
-            for rrset in response.answer + response.authority:
-                if rrset.rdtype == dns.rdatatype.NS:
+            
+            # Safely handle response.answer and response.authority
+            answer_rrsets = getattr(response, 'answer', [])
+            authority_rrsets = getattr(response, 'authority', [])
+            
+            for rrset in answer_rrsets + authority_rrsets:
+                if hasattr(rrset, 'rdtype') and rrset.rdtype == dns.rdatatype.NS:
                     # Check if this rrset is for the zone we're querying
                     rrset_name = str(rrset.name).rstrip('.')
                     if rrset_name == zone_name:
@@ -214,8 +219,11 @@ class DNSDelegationChecker:
                         if parent_ns:
                             child_response = self.query_authoritative(zone_name, "NS", parent_ns)
                             if child_response:
-                                for child_rrset in child_response.answer + child_response.authority:
-                                    if child_rrset.rdtype == dns.rdatatype.NS:
+                                child_answer_rrsets = getattr(child_response, 'answer', [])
+                                child_authority_rrsets = getattr(child_response, 'authority', [])
+                                
+                                for child_rrset in child_answer_rrsets + child_authority_rrsets:
+                                    if hasattr(child_rrset, 'rdtype') and child_rrset.rdtype == dns.rdatatype.NS:
                                         if str(child_rrset.name).rstrip('.') == zone_name:
                                             for rdata in child_rrset:
                                                 ns_records.append(str(rdata.target))
@@ -232,8 +240,13 @@ class DNSDelegationChecker:
             return []
         
         ns_records = []
-        for rrset in response.answer + response.authority:
-            if rrset.rdtype == dns.rdatatype.NS:
+        
+        # Safely handle response.answer and response.authority
+        answer_rrsets = getattr(response, 'answer', [])
+        authority_rrsets = getattr(response, 'authority', [])
+        
+        for rrset in answer_rrsets + authority_rrsets:
+            if hasattr(rrset, 'rdtype') and rrset.rdtype == dns.rdatatype.NS:
                 # Check if this rrset is for the domain we're querying
                 if str(rrset.name).rstrip('.') == domain:
                     for rdata in rrset:
@@ -248,9 +261,13 @@ class DNSDelegationChecker:
         
         for record_type in problematic_types:
             response = self.query_authoritative(domain, record_type, nameservers)
-            if response and (response.answer or response.authority):
-                for rrset in response.answer + response.authority:
-                    if rrset.rdtype == getattr(dns.rdatatype, record_type):
+            if response:
+                # Safely handle response.answer and response.authority
+                answer_rrsets = getattr(response, 'answer', [])
+                authority_rrsets = getattr(response, 'authority', [])
+                
+                for rrset in answer_rrsets + authority_rrsets:
+                    if hasattr(rrset, 'rdtype') and rrset.rdtype == getattr(dns.rdatatype, record_type):
                         for rdata in rrset:
                             problematic_records.append(f"{record_type}: {rdata}")
         
@@ -328,17 +345,17 @@ class DNSDelegationChecker:
                 status = DelegationStatus.ERROR
             elif not ns_records_in_parent:
                 status = DelegationStatus.MISSING_NS
-            elif any("SOA:" in record for record in problematic_records):
+            elif any(record.startswith("SOA:") or record.startswith("SOA ") for record in problematic_records):
                 status = DelegationStatus.EXTRA_SOA
-            elif any("A:" in record for record in problematic_records):
+            elif any(record.startswith("A:") or record.startswith("A ") for record in problematic_records):
                 status = DelegationStatus.EXTRA_A
-            elif any("AAAA:" in record for record in problematic_records):
+            elif any(record.startswith("AAAA:") or record.startswith("AAAA ") for record in problematic_records):
                 status = DelegationStatus.EXTRA_AAAA
-            elif any("CNAME:" in record for record in problematic_records):
+            elif any(record.startswith("CNAME:") or record.startswith("CNAME ") for record in problematic_records):
                 status = DelegationStatus.EXTRA_CNAME
-            elif any("MX:" in record for record in problematic_records):
+            elif any(record.startswith("MX:") or record.startswith("MX ") for record in problematic_records):
                 status = DelegationStatus.EXTRA_MX
-            elif any("TXT:" in record for record in problematic_records):
+            elif any(record.startswith("TXT:") or record.startswith("TXT ") for record in problematic_records):
                 status = DelegationStatus.EXTRA_TXT
             elif problematic_records:
                 status = DelegationStatus.OTHER_RECORDS
@@ -480,28 +497,17 @@ class DNSDelegationChecker:
             'ad': ['com.ad', 'net.ad', 'org.ad'],
             'sm': ['com.sm', 'net.sm', 'org.sm'],
             'va': ['com.va', 'net.va', 'org.va'],
-            'it': ['com.it', 'net.it', 'org.it'],
-            'es': ['com.es', 'net.es', 'org.es'],
-            'pt': ['com.pt', 'net.pt', 'org.pt'],
-            'gr': ['com.gr', 'net.gr', 'org.gr'],
-            'cy': ['com.cy', 'net.cy', 'org.cy'],
-            'mt': ['com.mt', 'net.mt', 'org.mt'],
-            'mc': ['com.mc', 'net.mc', 'org.mc'],
-            'ad': ['com.ad', 'net.ad', 'org.ad'],
-            'sm': ['com.sm', 'net.sm', 'org.sm'],
-            'va': ['com.va', 'net.va', 'org.va'],
         }
         
         domain_parts = domain.split('.')
         if len(domain_parts) >= 2:
+            # Check if the last two parts form a legitimate second-level domain
+            second_level = '.'.join(domain_parts[-2:])
             tld = domain_parts[-1]
+            
             if tld in legitimate_second_levels:
-                # Check if this is a legitimate second-level domain
-                second_level = '.'.join(domain_parts[-2:])
                 if second_level in legitimate_second_levels[tld]:
-                    # Only return True if this is exactly a second-level domain (no additional parts)
-                    if len(domain_parts) == 2:
-                        return True
+                    return True
         
         return False
 

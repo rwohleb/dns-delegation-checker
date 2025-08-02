@@ -80,7 +80,7 @@ class TestDNSDelegationChecker:
             mock_resolver = Mock()
             mock_resolver_class.return_value = mock_resolver
 
-            # Create Mock objects that return the correct string values
+            # Create Mock objects that return IP addresses when converted to string
             mock_answer1 = Mock()
             mock_answer1.__str__ = Mock(return_value="192.168.1.1")
             mock_answer2 = Mock()
@@ -238,16 +238,29 @@ class TestDNSDelegationChecker:
 
     def test_is_legitimate_second_level_domain(self, checker):
         """Test legitimate second-level domain detection"""
-        # Test legitimate second-level domains
-        assert checker.is_legitimate_second_level_domain("example.co.uk")
-        assert checker.is_legitimate_second_level_domain("example.com.br")
-        assert checker.is_legitimate_second_level_domain("example.com.au")
-        assert checker.is_legitimate_second_level_domain("example.org.uk")
+        # Test legitimate second-level domains (exactly 2 parts)
+        assert checker.is_legitimate_second_level_domain("co.uk")
+        assert checker.is_legitimate_second_level_domain("com.br")
+        assert checker.is_legitimate_second_level_domain("com.au")
+        assert checker.is_legitimate_second_level_domain("org.uk")
+
+        # Test domains with more than 2 parts (should return False)
+        assert not checker.is_legitimate_second_level_domain("example.co.uk")
+        assert not checker.is_legitimate_second_level_domain("example.com.br")
+        assert not checker.is_legitimate_second_level_domain("example.com.au")
+        assert not checker.is_legitimate_second_level_domain("example.org.uk")
+        assert not checker.is_legitimate_second_level_domain("fia.com.br")
+        assert not checker.is_legitimate_second_level_domain("example.net.br")
 
         # Test regular domains (should return False)
         assert not checker.is_legitimate_second_level_domain("example.com")
         assert not checker.is_legitimate_second_level_domain("sub.example.com")
         assert not checker.is_legitimate_second_level_domain("example.org")
+
+        # Test third-level domains that should NOT be considered legitimate second-level
+        assert not checker.is_legitimate_second_level_domain("www.example.com.br")
+        assert not checker.is_legitimate_second_level_domain("sub.example.com.br")
+        assert not checker.is_legitimate_second_level_domain("www.example.co.uk")
 
     @patch("dns_delegation_checker.DNSDelegationChecker.get_nameservers_for_zone")
     @patch("dns_delegation_checker.DNSDelegationChecker.get_ns_records_for_domain")

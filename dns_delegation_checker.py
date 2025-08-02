@@ -69,6 +69,70 @@ class DNSDelegationChecker:
         "202.12.27.33",  # m.root-servers.net
     ]
 
+    # Common second-level domains in various TLDs
+    LEGITIMATE_SECOND_LEVELS = {
+        "br": [
+            "com.br",
+            "net.br",
+            "org.br",
+            "gov.br",
+            "edu.br",
+            "mil.br",
+            "int.br",
+        ],
+        "uk": [
+            "co.uk",
+            "org.uk",
+            "me.uk",
+            "ltd.uk",
+            "plc.uk",
+            "net.uk",
+            "sch.uk",
+            "ac.uk",
+            "gov.uk",
+            "nhs.uk",
+        ],
+        "au": ["com.au", "net.au", "org.au", "edu.au", "gov.au"],
+        "ca": ["com.ca", "net.ca", "org.ca", "edu.ca", "gov.ca"],
+        "de": ["com.de", "net.de", "org.de"],
+        "fr": ["com.fr", "net.fr", "org.fr"],
+        "it": ["com.it", "net.it", "org.it"],
+        "es": ["com.es", "net.es", "org.es"],
+        "nl": ["com.nl", "net.nl", "org.nl"],
+        "se": ["com.se", "net.se", "org.se"],
+        "no": ["com.no", "net.no", "org.no"],
+        "dk": ["com.dk", "net.dk", "org.dk"],
+        "fi": ["com.fi", "net.fi", "org.fi"],
+        "pl": ["com.pl", "net.pl", "org.pl"],
+        "cz": ["com.cz", "net.cz", "org.cz"],
+        "sk": ["com.sk", "net.sk", "org.sk"],
+        "hu": ["com.hu", "net.hu", "org.hu"],
+        "ro": ["com.ro", "net.ro", "org.ro"],
+        "bg": ["com.bg", "net.bg", "org.bg"],
+        "hr": ["com.hr", "net.hr", "org.hr"],
+        "si": ["com.si", "net.si", "org.si"],
+        "rs": ["com.rs", "net.rs", "org.rs"],
+        "me": ["com.me", "net.me", "org.me"],
+        "ba": ["com.ba", "net.ba", "org.ba"],
+        "mk": ["com.mk", "net.mk", "org.mk"],
+        "al": ["com.al", "net.al", "org.al"],
+        "gr": ["com.gr", "net.gr", "org.gr"],
+        "cy": ["com.cy", "net.cy", "org.cy"],
+        "mt": ["com.mt", "net.mt", "org.mt"],
+        "pt": ["com.pt", "net.pt", "org.pt"],
+        "ie": ["com.ie", "net.ie", "org.ie"],
+        "is": ["com.is", "net.is", "org.is"],
+        "li": ["com.li", "net.li", "org.li"],
+        "ch": ["com.ch", "net.ch", "org.ch"],
+        "at": ["com.at", "net.at", "org.at"],
+        "lu": ["com.lu", "net.lu", "org.lu"],
+        "be": ["com.be", "net.be", "org.be"],
+        "mc": ["com.mc", "net.mc", "org.mc"],
+        "ad": ["com.ad", "net.ad", "org.ad"],
+        "sm": ["com.sm", "net.sm", "org.sm"],
+        "va": ["com.va", "net.va", "org.va"],
+    }
+
     def __init__(self, use_dynamic_roots: bool = True):
         # Initialize root servers dynamically or use fallback
         if use_dynamic_roots:
@@ -166,14 +230,22 @@ class DNSDelegationChecker:
             try:
                 answers = resolver.resolve(ns_name, "A")
                 return [str(answer) for answer in answers]
-            except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer):
+            except (
+                dns.resolver.NXDOMAIN,
+                dns.resolver.NoAnswer,
+                dns.resolver.SERVFAIL,
+            ):
                 pass
 
             # Try AAAA records
             try:
                 answers = resolver.resolve(ns_name, "AAAA")
                 return [str(answer) for answer in answers]
-            except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer):
+            except (
+                dns.resolver.NXDOMAIN,
+                dns.resolver.NoAnswer,
+                dns.resolver.SERVFAIL,
+            ):
                 pass
 
             # If we can't resolve, return empty list instead of the original name
@@ -194,8 +266,8 @@ class DNSDelegationChecker:
             for ns_ip in ns_ips:
                 try:
                     response = dns.query.udp(query, ns_ip, timeout=3)  # Reduced timeout
-                    if response.answer or response.authority:
-                        return response
+                    # Return response even if empty, as tests expect this behavior
+                    return response
                 except (dns.exception.DNSException, OSError, TimeoutError):
                     continue
         return None
@@ -565,79 +637,16 @@ class DNSDelegationChecker:
         Check if a domain is a legitimate second-level domain in a foreign TLD,
         not a delegated subdomain that should be checked for problematic records.
         """
-        # Common second-level domains in various TLDs
-        legitimate_second_levels = {
-            "br": [
-                "com.br",
-                "net.br",
-                "org.br",
-                "gov.br",
-                "edu.br",
-                "mil.br",
-                "int.br",
-            ],
-            "uk": [
-                "co.uk",
-                "org.uk",
-                "me.uk",
-                "ltd.uk",
-                "plc.uk",
-                "net.uk",
-                "sch.uk",
-                "ac.uk",
-                "gov.uk",
-                "nhs.uk",
-            ],
-            "au": ["com.au", "net.au", "org.au", "edu.au", "gov.au"],
-            "ca": ["com.ca", "net.ca", "org.ca", "edu.ca", "gov.ca"],
-            "de": ["com.de", "net.de", "org.de"],
-            "fr": ["com.fr", "net.fr", "org.fr"],
-            "it": ["com.it", "net.it", "org.it"],
-            "es": ["com.es", "net.es", "org.es"],
-            "nl": ["com.nl", "net.nl", "org.nl"],
-            "se": ["com.se", "net.se", "org.se"],
-            "no": ["com.no", "net.no", "org.no"],
-            "dk": ["com.dk", "net.dk", "org.dk"],
-            "fi": ["com.fi", "net.fi", "org.fi"],
-            "pl": ["com.pl", "net.pl", "org.pl"],
-            "cz": ["com.cz", "net.cz", "org.cz"],
-            "sk": ["com.sk", "net.sk", "org.sk"],
-            "hu": ["com.hu", "net.hu", "org.hu"],
-            "ro": ["com.ro", "net.ro", "org.ro"],
-            "bg": ["com.bg", "net.bg", "org.bg"],
-            "hr": ["com.hr", "net.hr", "org.hr"],
-            "si": ["com.si", "net.si", "org.si"],
-            "rs": ["com.rs", "net.rs", "org.rs"],
-            "me": ["com.me", "net.me", "org.me"],
-            "ba": ["com.ba", "net.ba", "org.ba"],
-            "mk": ["com.mk", "net.mk", "org.mk"],
-            "al": ["com.al", "net.al", "org.al"],
-            "gr": ["com.gr", "net.gr", "org.gr"],
-            "cy": ["com.cy", "net.cy", "org.cy"],
-            "mt": ["com.mt", "net.mt", "org.mt"],
-            "pt": ["com.pt", "net.pt", "org.pt"],
-            "ie": ["com.ie", "net.ie", "org.ie"],
-            "is": ["com.is", "net.is", "org.is"],
-            "li": ["com.li", "net.li", "org.li"],
-            "ch": ["com.ch", "net.ch", "org.ch"],
-            "at": ["com.at", "net.at", "org.at"],
-            "lu": ["com.lu", "net.lu", "org.lu"],
-            "be": ["com.be", "net.be", "org.be"],
-            "mc": ["com.mc", "net.mc", "org.mc"],
-            "ad": ["com.ad", "net.ad", "org.ad"],
-            "sm": ["com.sm", "net.sm", "org.sm"],
-            "va": ["com.va", "net.va", "org.va"],
-        }
-
         domain_parts = domain.split(".")
         if len(domain_parts) >= 2:
             # Check if the last two parts form a legitimate second-level domain
             second_level = ".".join(domain_parts[-2:])
             tld = domain_parts[-1]
 
-            if tld in legitimate_second_levels:
-                if second_level in legitimate_second_levels[tld]:
-                    return True
+            if tld in self.LEGITIMATE_SECOND_LEVELS:
+                if second_level in self.LEGITIMATE_SECOND_LEVELS[tld]:
+                    # Return True if this is exactly the legitimate second-level domain
+                    return domain == second_level
 
         return False
 

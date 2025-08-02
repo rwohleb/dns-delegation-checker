@@ -14,7 +14,8 @@ A Python tool for testing DNS delegation chains from root servers to target zone
   - TXT records in parent zones
   - Other record types (SRV, PTR, CAA, etc.)
 - **NS Record Validation**: Checks for missing or incorrect NS records
-- **Expected Nameserver Validation**: Validates against expected nameserver configurations
+- **NS Record Mismatch Detection**: Compares NS records between parent and child zones for consistency
+- **Legitimate Second-Level Domain Detection**: Avoids false positives for legitimate second-level domains (e.g., .co.uk, .com.br)
 - **Detailed Explanations**: Provides educational explanations of each issue found
 - **JSON Export**: Export results to JSON format for further analysis
 
@@ -71,6 +72,7 @@ The script analyzes DNS delegation by:
    - Checks if NS records exist in the parent zone
    - Verifies nameserver reachability
    - Tests if child zone nameservers are authoritative for the zone
+   - Note: All levels are processed using the same validation logic
 
 2. **Level 1+ - Parent Zone Checks**:
    - Checks each parent zone for problematic records
@@ -92,6 +94,16 @@ The script detects these problematic record types in parent zones:
 ### The Rule of Thumb
 
 In a proper delegation setup, the parent zone should **only** contain NS records pointing to the child zone's authoritative nameservers. Any other record types in the parent zone for the child zone indicate improper configuration and can cause DNS resolution issues.
+
+### Legitimate Second-Level Domain Detection
+
+The tool includes sophisticated logic to avoid false positives for legitimate second-level domains in various TLDs. For example:
+- `.co.uk`, `.org.uk`, `.gov.uk` in the UK
+- `.com.br`, `.net.br`, `.org.br` in Brazil  
+- `.com.au`, `.net.au`, `.org.au` in Australia
+- And many other country-specific second-level domains
+
+These domains are legitimate and should not trigger problematic record warnings.
 
 ## Output Format
 
@@ -148,10 +160,12 @@ Status Breakdown:
 
 The script handles various error conditions:
 
-- **Network Issues**: Timeout handling for DNS queries
+- **Network Issues**: Timeout handling for DNS queries (3-second timeout for queries, 5-second timeout for resolver)
 - **Unreachable Nameservers**: Detection and reporting
 - **Missing Zones**: Proper error reporting for non-existent domains
 - **DNS Server Errors**: Graceful handling of server errors
+- **IPv6 Support**: Handles both A and AAAA records for nameserver resolution
+- **Root Server Fallback**: Uses hardcoded list of root servers for reliable delegation chain tracing
 
 ## Testing
 

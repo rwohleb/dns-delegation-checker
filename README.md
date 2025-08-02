@@ -66,6 +66,97 @@ python3 dns_delegation_checker.py example.com --no-dynamic-roots
 - `--no-dynamic-roots`: Use hardcoded root servers instead of dynamic fetching
 - `--verbose`: Enable verbose output
 
+## Testing
+
+The project includes comprehensive testing using pytest. Here are the available test commands:
+
+### Quick Start
+
+```bash
+# Install dependencies
+make install
+
+# Run all tests
+make test
+
+# Run tests with coverage
+make test-coverage
+```
+
+### Test Commands
+
+```bash
+# Run all tests
+pytest
+
+# Run unit tests only (faster)
+pytest -m "not integration"
+
+# Run integration tests only
+pytest -m integration
+
+# Run tests with coverage report
+pytest --cov=dns_delegation_checker --cov-report=html
+
+# Run tests quickly (no coverage, no integration)
+pytest -m "not integration" --tb=short -q
+```
+
+### Using Makefile
+
+```bash
+# Show all available commands
+make help
+
+# Install dependencies
+make install
+
+# Run all tests
+make test
+
+# Run unit tests only
+make test-unit
+
+# Run integration tests only
+make test-integration
+
+# Run tests with coverage
+make test-coverage
+
+# Clean up generated files
+make clean
+
+# Run linting
+make lint
+
+# Format code
+make format
+
+# Run all checks (lint + test + coverage)
+make check
+
+# Demo with example domains
+make demo
+```
+
+### Test Structure
+
+- **Unit Tests**: Test individual functions and methods with mocked dependencies
+- **Integration Tests**: Test with real DNS queries (marked with `@pytest.mark.integration`)
+- **CLI Tests**: Test command-line interface functionality
+- **Edge Case Tests**: Test error conditions and boundary cases
+
+### Test Coverage
+
+The test suite covers:
+- DNS delegation chain analysis
+- Nameserver resolution
+- Problematic record detection
+- Command-line interface
+- Error handling
+- Edge cases and boundary conditions
+- Legitimate second-level domain detection
+
 ## How It Works
 
 ### Delegation Chain Analysis
@@ -172,12 +263,45 @@ The script handles various error conditions:
 - **IPv6 Support**: Handles both A and AAAA records for nameserver resolution
 - **Dynamic Root Server Fetching**: Automatically fetches current root servers from multiple public DNS resolvers with fallback to hardcoded list
 
-## Testing
+## Development
 
-Run the test script to verify functionality:
+### Setting Up Development Environment
 
 ```bash
-python3 test_delegation_checker.py
+# Install development dependencies
+make install-dev
+
+# Set up the development environment
+make setup
+```
+
+### Running Tests
+
+```bash
+# Run all tests
+make test
+
+# Run unit tests only
+make test-unit
+
+# Run integration tests only
+make test-integration
+
+# Run tests with coverage
+make test-coverage
+```
+
+### Code Quality
+
+```bash
+# Run linting
+make lint
+
+# Format code
+make format
+
+# Run all checks
+make check
 ```
 
 ## Use Cases
@@ -191,6 +315,13 @@ python3 test_delegation_checker.py
 ## Contributing
 
 Feel free to submit issues and enhancement requests!
+
+### Development Guidelines
+
+1. Write tests for new features
+2. Ensure all tests pass before submitting
+3. Follow the existing code style
+4. Add appropriate documentation
 
 ## License
 

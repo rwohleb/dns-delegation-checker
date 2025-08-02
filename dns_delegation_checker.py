@@ -506,14 +506,20 @@ class DNSDelegationChecker:
         return False
 
 
-def main():
+def parse_arguments():
+    """Parse command line arguments"""
     parser = argparse.ArgumentParser(description="DNS delegation chain testing")
     parser.add_argument("domain", help="Target domain to test (e.g., test.mail.google.com)")
     parser.add_argument("--export", help="Export results to JSON file")
     parser.add_argument("--explain", action="store_true", help="Provide detailed explanations for each error found")
     parser.add_argument("--no-dynamic-roots", action="store_true", help="Use hardcoded root servers instead of dynamic fetching")
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
     
-    args = parser.parse_args()
+    return parser.parse_args()
+
+
+def main():
+    args = parse_arguments()
     
     checker = DNSDelegationChecker(use_dynamic_roots=not args.no_dynamic_roots)
     

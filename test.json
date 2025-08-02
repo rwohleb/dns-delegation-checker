@@ -1,0 +1,72 @@
+{
+  "target_domain": "sub2.sub1.dns-test.plaidbean.com",
+  "analysis_time": "2025-08-01T18:08:09.616590",
+  "results": [
+    {
+      "zone_name": "sub2.sub1.dns-test.plaidbean.com",
+      "parent_zone": "sub1.dns-test.plaidbean.com",
+      "status": "DelegationStatus.MISSING_NS",
+      "ns_records_in_parent": [],
+      "ns_records_in_child": [],
+      "problematic_records": [
+        "SOA: ns-852.awsdns-42.net. awsdns-hostmaster.amazon.com. 1 7200 900 1209600 86400",
+        "A: 1.1.1.1",
+        "MX: 10 mailserver.example.com."
+      ]
+    },
+    {
+      "zone_name": "sub1.dns-test.plaidbean.com",
+      "parent_zone": "dns-test.plaidbean.com",
+      "status": "DelegationStatus.PROPER",
+      "ns_records_in_parent": [
+        "ns-1437.awsdns-51.org.",
+        "ns-2041.awsdns-63.co.uk.",
+        "ns-305.awsdns-38.com.",
+        "ns-852.awsdns-42.net."
+      ],
+      "ns_records_in_child": [
+        "ns-1437.awsdns-51.org.",
+        "ns-2041.awsdns-63.co.uk.",
+        "ns-305.awsdns-38.com.",
+        "ns-852.awsdns-42.net."
+      ],
+      "problematic_records": []
+    },
+    {
+      "zone_name": "dns-test.plaidbean.com",
+      "parent_zone": "plaidbean.com",
+      "status": "DelegationStatus.PROPER",
+      "ns_records_in_parent": [
+        "ns-1173.awsdns-18.org.",
+        "ns-1699.awsdns-20.co.uk.",
+        "ns-432.awsdns-54.com.",
+        "ns-649.awsdns-17.net."
+      ],
+      "ns_records_in_child": [
+        "ns-1173.awsdns-18.org.",
+        "ns-1699.awsdns-20.co.uk.",
+        "ns-432.awsdns-54.com.",
+        "ns-649.awsdns-17.net."
+      ],
+      "problematic_records": []
+    },
+    {
+      "zone_name": "plaidbean.com",
+      "parent_zone": "com",
+      "status": "DelegationStatus.PROPER",
+      "ns_records_in_parent": [
+        "ns-98.awsdns-12.com.",
+        "ns-714.awsdns-25.net.",
+        "ns-1732.awsdns-24.co.uk.",
+        "ns-1475.awsdns-56.org."
+      ],
+      "ns_records_in_child": [
+        "ns-1475.awsdns-56.org.",
+        "ns-1732.awsdns-24.co.uk.",
+        "ns-714.awsdns-25.net.",
+        "ns-98.awsdns-12.com."
+      ],
+      "problematic_records": []
+    }
+  ]
+}
